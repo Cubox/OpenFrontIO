@@ -136,7 +136,7 @@ export async function startMaster() {
     );
   });
 
-  const PORT = 3000;
+  const PORT = 3564;
   server.listen(PORT, () => {
     log.info(`Master HTTP server listening on port ${PORT}`);
   });

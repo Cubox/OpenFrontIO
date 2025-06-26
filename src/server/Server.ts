@@ -15,7 +15,7 @@ async function main() {
   // Check if this is the primary (master) process
   if (cluster.isPrimary) {
     if (config.env() !== GameEnv.Dev) {
-      await setupTunnels();
+      //await setupTunnels();
     }
     console.log("Starting master process...");
     await startMaster();
@@ -42,14 +42,14 @@ async function setupTunnels() {
 
   const domainToService = new Map<string, string>().set(
     config.subdomain(),
-    // TODO: change to 3000 when we have a proper tunnel setup.
+    // TODO: change to 3564 when we have a proper tunnel setup.
     `http://localhost:80`,
   );
 
   for (let i = 0; i < config.numWorkers(); i++) {
     domainToService.set(
       `w${i}-${config.subdomain()}`,
-      `http://localhost:${3000 + i + 1}`,
+      `http://localhost:${3565 + i}`,
     );
   }
 
