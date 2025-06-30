@@ -37,7 +37,7 @@ This document lists all changes made to create the Cubox version of OpenFrontIO.
 ### New Upgrade Benefits
 
 - **SAM Launchers**: +10% range per level (Level 3 = 96.8 range)
-- **Ports**: 1.5x trade ship spawn rate per level
+- **Ports**: +10% trade revenue per level (instead of more ships to reduce lag)
 - **Factories**: +5% gold income per level
 - **Defense Posts**: No longer upgradeable (prevents resource waste)
 

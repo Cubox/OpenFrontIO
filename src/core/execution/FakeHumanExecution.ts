@@ -501,6 +501,12 @@ export class FakeHumanExecution implements Execution {
     if (this.maybeSpawnStructurePhase1(UnitType.Port, 1)) {
       return;
     }
+    if (this.maybeSpawnStructurePhase1(UnitType.City, 1)) {
+      return;
+    }
+    if (this.maybeSpawnStructurePhase1(UnitType.MissileSilo, 1)) {
+      return;
+    }
     if (this.maybeSpawnStructurePhase1(UnitType.City, 2)) {
       return;
     }
@@ -508,9 +514,6 @@ export class FakeHumanExecution implements Execution {
       return;
     }
     if (this.maybeSpawnTrainStation()) {
-      return;
-    }
-    if (this.maybeSpawnStructurePhase1(UnitType.MissileSilo, 1)) {
       return;
     }
     if (this.maybeSpawnStructurePhase1(UnitType.MissileSilo, 2)) {
@@ -637,28 +640,8 @@ export class FakeHumanExecution implements Execution {
 
     switch (unitType) {
       case UnitType.Port: {
-        // For ports, calculate if upgrading would decrease spawn rate number (increase probability)
-        const totalPorts = this.player!.units(UnitType.Port).length;
-        const baseSpawnRate = Math.min(
-          50,
-          Math.round(10 * Math.pow(totalPorts, 0.6)),
-        );
-
-        const currentMultiplier = Math.pow(1.5, currentLevel - 1);
-        const nextMultiplier = Math.pow(1.5, currentLevel);
-
-        const currentSpawnRate = Math.max(
-          1,
-          Math.round(baseSpawnRate / currentMultiplier),
-        );
-        const nextSpawnRate = Math.max(
-          1,
-          Math.round(baseSpawnRate / nextMultiplier),
-        );
-
-        // Only beneficial if next level decreases spawn rate number (higher probability)
-        // Since chance(X) means 1/X probability, lower X = higher probability
-        return nextSpawnRate < currentSpawnRate;
+        // For ports, upgrades are always beneficial as they increase trade revenue
+        return true;
       }
 
       // For other upgradable structures, upgrades are always beneficial

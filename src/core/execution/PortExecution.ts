@@ -53,15 +53,9 @@ export class PortExecution implements Execution {
     }
 
     const totalNbOfPorts = this.mg.units(UnitType.Port).length;
-    // 1.5x trade ship spawn rate per level (divide by multiplier since chance(X) = 1/X probability)
-    const levelMultiplier = Math.pow(1.5, this.port.level() - 1);
     const baseSpawnRate = this.mg.config().tradeShipSpawnRate(totalNbOfPorts);
-    const adjustedSpawnRate = Math.max(
-      1,
-      Math.round(baseSpawnRate / levelMultiplier),
-    );
 
-    if (!this.random.chance(adjustedSpawnRate)) {
+    if (!this.random.chance(baseSpawnRate)) {
       return;
     }
 

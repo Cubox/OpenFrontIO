@@ -126,17 +126,25 @@ export class TradeShipExecution implements Execution {
   private complete() {
     this.active = false;
     this.tradeShip!.delete(false);
-    const gold = this.mg.config().tradeShipGold(this.tilesTraveled);
+    const baseGold = this.mg.config().tradeShipGold(this.tilesTraveled);
 
     if (this.wasCaptured) {
-      this.tradeShip!.owner().addGold(gold);
+      // Captured ships: no port bonuses, only 10% of base value
+      const capturedGold = BigInt(Math.floor(Number(baseGold) * 0.1));
+      this.tradeShip!.owner().addGold(capturedGold);
       this.mg.displayMessage(
-        `Received ${renderNumber(gold)} gold from ship captured from ${this.origOwner.displayName()}`,
+        `Received ${renderNumber(capturedGold)} gold from ship captured from ${this.origOwner.displayName()}`,
         MessageType.CAPTURED_ENEMY_UNIT,
         this.tradeShip!.owner().id(),
-        gold,
+        capturedGold,
       );
     } else {
+      // Normal trade: apply port level bonus: 10% more gold per level for both ports
+      const srcPortLevelBonus = 1 + (this.srcPort.level() - 1) * 0.1;
+      const dstPortLevelBonus = 1 + (this._dstPort.level() - 1) * 0.1;
+      const combinedBonus = (srcPortLevelBonus + dstPortLevelBonus) / 2;
+      const gold = BigInt(Math.floor(Number(baseGold) * combinedBonus));
+
       this.srcPort.owner().addGold(gold);
       this._dstPort.owner().addGold(gold);
       this.mg.displayMessage(
