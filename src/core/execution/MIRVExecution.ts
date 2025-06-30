@@ -98,23 +98,23 @@ export class MirvExecution implements Execution {
       }
       dsts.push(potential);
     }
-    console.log(`dsts: ${dsts.length}`);
     dsts.sort(
       (a, b) =>
         this.mg.manhattanDist(b, this.dst) - this.mg.manhattanDist(a, this.dst),
     );
-    console.log(`got ${dsts.length} dsts!!`);
 
     for (const [i, dst] of dsts.entries()) {
+      const delay = 15 + Math.floor((i / this.warheadCount) * 5);
+      const spread = this.random.nextInt(0, 15);
+
       this.mg.addExecution(
         new NukeExecution(
           UnitType.MIRVWarhead,
           this.player,
           dst,
           this.nuke.tile(),
-          15 + Math.floor((i / this.warheadCount) * 5),
-          //   this.random.nextInt(5, 9),
-          this.random.nextInt(0, 15),
+          delay,
+          spread,
         ),
       );
     }
@@ -161,7 +161,6 @@ export class MirvExecution implements Execution {
       }
       return tile;
     }
-    console.log("couldn't find place, giving up");
     return null;
   }
 

@@ -255,6 +255,19 @@ export class WorkerClient {
     });
   }
 
+  sendDelegationSettings(enabled: boolean, goldReserve: number): void {
+    if (!this.isInitialized) {
+      console.warn("Worker not initialized, cannot send delegation settings");
+      return;
+    }
+
+    this.worker.postMessage({
+      type: "delegation_settings",
+      enabled: enabled,
+      goldReserve: goldReserve,
+    });
+  }
+
   cleanup() {
     this.worker.terminate();
     this.messageHandlers.clear();

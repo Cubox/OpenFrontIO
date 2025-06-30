@@ -1,6 +1,6 @@
 import { Execution, Game } from "../game/Game";
 import { PseudoRandom } from "../PseudoRandom";
-import { ClientID, GameID, Intent, Turn } from "../Schemas";
+import { ClientID, GameID, Intent } from "../Schemas";
 import { simpleHash } from "../Util";
 import { AllianceRequestExecution } from "./alliance/AllianceRequestExecution";
 import { AllianceRequestReplyExecution } from "./alliance/AllianceRequestReplyExecution";
@@ -9,6 +9,7 @@ import { AttackExecution } from "./AttackExecution";
 import { BoatRetreatExecution } from "./BoatRetreatExecution";
 import { BotSpawner } from "./BotSpawner";
 import { ConstructionExecution } from "./ConstructionExecution";
+import { DelegationManager } from "./DelegationManager";
 import { DonateGoldExecution } from "./DonateGoldExecution";
 import { DonateTroopsExecution } from "./DonateTroopExecution";
 import { EmbargoExecution } from "./EmbargoExecution";
@@ -29,6 +30,7 @@ import { UpgradeStructureExecution } from "./UpgradeStructureExecution";
 export class Executor {
   // private random = new PseudoRandom(999)
   private random: PseudoRandom;
+  private delegationManager: DelegationManager | null = null;
 
   constructor(
     private mg: Game,
@@ -39,8 +41,36 @@ export class Executor {
     this.random = new PseudoRandom(simpleHash(gameID) + 1);
   }
 
-  createExecs(turn: Turn): Execution[] {
-    return turn.intents.map((i) => this.createExec(i));
+  initDelegation() {
+    this.delegationManager = new DelegationManager(this.mg, this.gameID);
+    this.delegationManager.init();
+  }
+
+  updatePlayerDelegation(
+    playerId: string,
+    goldReserve: number,
+    enabled: boolean,
+  ) {
+    this.delegationManager?.updatePlayerDelegation(
+      playerId,
+      goldReserve,
+      enabled,
+    );
+  }
+
+  updateDelegationFromUserSettings(playerId: string) {
+    this.delegationManager?.updateFromUserSettings(playerId);
+  }
+
+  updateAllDelegationsFromUserSettings() {
+    this.delegationManager?.updateAllFromUserSettings();
+  }
+
+  updateAllDelegationsFromDirectSettings(
+    enabled: boolean,
+    goldReserve: number,
+  ) {
+    this.delegationManager?.updateAllFromDirectSettings(enabled, goldReserve);
   }
 
   createExec(intent: Intent): Execution {

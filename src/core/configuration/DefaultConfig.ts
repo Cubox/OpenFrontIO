@@ -296,7 +296,7 @@ export class DefaultConfig implements Config {
     return this._gameConfig.infiniteTroops;
   }
   tradeShipGold(dist: number): Gold {
-    return BigInt(Math.floor(10000 + 150 * Math.pow(dist, 1.1)));
+    return BigInt(Math.floor((10000 + 150 * Math.pow(dist, 1.1)) / 2));
   }
   tradeShipSpawnRate(numberOfPorts: number): number {
     return Math.min(50, Math.round(10 * Math.pow(numberOfPorts, 0.6)));
@@ -422,7 +422,7 @@ export class DefaultConfig implements Config {
                 ),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 5 * 10,
-          upgradable: true,
+          upgradable: false,
         };
       case UnitType.SAMLauncher:
         return {
@@ -469,6 +469,7 @@ export class DefaultConfig implements Config {
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
           canBuildTrainStation: true,
+          upgradable: true,
         };
       case UnitType.Construction:
         return {
@@ -759,7 +760,16 @@ export class DefaultConfig implements Config {
   }
 
   goldAdditionRate(player: Player): Gold {
-    return BigInt(Math.floor(0.045 * player.workers() ** 0.7));
+    const baseGold = BigInt(Math.floor(0.045 * player.workers() ** 0.7));
+
+    // 5% gold bonus per factory level
+    const factories = player.units(UnitType.Factory);
+    const factoryBonus = factories.reduce((total, factory) => {
+      return total + factory.level() * 0.05;
+    }, 0);
+
+    const bonusMultiplier = 1 + factoryBonus;
+    return BigInt(Math.floor(Number(baseGold) * bonusMultiplier));
   }
 
   troopAdjustmentRate(player: Player): number {

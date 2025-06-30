@@ -356,18 +356,11 @@ export function startWorker() {
             // TODO: Implement custom flag validation
           }
 
-          // Check if the pattern is allowed
+          // Check if the pattern is allowed - DISABLED
+          // Always allow all patterns
           if (clientMsg.pattern !== undefined) {
-            const allowed = privilegeChecker.isPatternAllowed(
-              clientMsg.pattern,
-              roles,
-              flares,
-            );
-            if (allowed !== true) {
-              log.warn(`Pattern ${allowed}: ${clientMsg.pattern}`);
-              ws.close(1002, `Pattern ${allowed}`);
-              return;
-            }
+            // Pattern checking disabled - allow all patterns
+            log.info(`Pattern allowed: ${clientMsg.pattern}`);
           }
 
           // Create client and add to game

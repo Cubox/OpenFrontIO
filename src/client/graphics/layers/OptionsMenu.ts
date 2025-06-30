@@ -97,6 +97,7 @@ export class OptionsMenu extends LitElement implements Layer {
 
   private onToggleEmojisButtonClick() {
     this.userSettings.toggleEmojis();
+    this.eventBus.emit(new RefreshGraphicsEvent());
     this.requestUpdate();
   }
 
@@ -248,6 +249,7 @@ export class OptionsMenu extends LitElement implements Layer {
                 ? "Opens menu"
                 : "Attack"),
           })}
+
           <!-- ${button({
             onClick: this.onToggleFocusLockedButtonClick,
             title: "Lock Focus",

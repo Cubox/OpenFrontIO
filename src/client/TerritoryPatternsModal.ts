@@ -73,38 +73,9 @@ export class TerritoryPatternsModal extends LitElement {
     roles: string[] | undefined,
     flares: string[] | undefined,
   ) {
+    // Always unlock all patterns - remove all restrictions
     this.lockedPatterns = [];
     this.lockedReasons = {};
-    for (const key in COSMETICS.patterns) {
-      const patternData = COSMETICS.patterns[key];
-      const roleGroup: string[] | string | undefined = patternData.role_group;
-      if (
-        flares !== undefined &&
-        (flares.includes("pattern:*") || flares.includes(`pattern:${key}`))
-      ) {
-        continue;
-      }
-
-      if (!roleGroup || (Array.isArray(roleGroup) && roleGroup.length === 0)) {
-        if (roles === undefined || roles.length === 0) {
-          const reason = translateText("territory_patterns.blocked.login");
-          this.setLockedPatterns([key], reason);
-        }
-        continue;
-      }
-
-      const groupList = Array.isArray(roleGroup) ? roleGroup : [roleGroup];
-      const isAllowed =
-        roles !== undefined &&
-        groupList.some((required) => roles.includes(required));
-
-      if (!isAllowed) {
-        const reason = translateText("territory_patterns.blocked.role", {
-          role: groupList.join(", "),
-        });
-        this.setLockedPatterns([key], reason);
-      }
-    }
     this.requestUpdate();
   }
 

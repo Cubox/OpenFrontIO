@@ -26,6 +26,7 @@ import {
   Winner,
 } from "../core/Schemas";
 import { replacer } from "../core/Util";
+import { WorkerClient } from "../core/worker/WorkerClient";
 import { LobbyConfig } from "./ClientGameRunner";
 import { LocalServer } from "./LocalServer";
 
@@ -146,6 +147,13 @@ export class SendSetTargetTroopRatioEvent implements GameEvent {
   constructor(public readonly ratio: number) {}
 }
 
+export class SendBuildingDelegationEvent implements GameEvent {
+  constructor(
+    public readonly enabled: boolean,
+    public readonly goldReserve: number,
+  ) {}
+}
+
 export class SendWinnerEvent implements GameEvent {
   constructor(
     public readonly winner: Winner,
@@ -178,6 +186,7 @@ export class Transport {
 
   private pingInterval: number | null = null;
   public readonly isLocal: boolean;
+  private workerClient: WorkerClient | null = null;
   constructor(
     private lobbyConfig: LobbyConfig,
     private eventBus: EventBus,
@@ -226,6 +235,9 @@ export class Transport {
     );
     this.eventBus.on(SendSetTargetTroopRatioEvent, (e) =>
       this.onSendSetTargetTroopRatioEvent(e),
+    );
+    this.eventBus.on(SendBuildingDelegationEvent, (e) =>
+      this.onSendBuildingDelegationEvent(e),
     );
     this.eventBus.on(BuildUnitIntentEvent, (e) => this.onBuildUnitIntent(e));
 
@@ -359,6 +371,10 @@ export class Transport {
     if (this.isLocal) {
       this.localServer.turnComplete();
     }
+  }
+
+  public setWorkerClient(workerClient: WorkerClient): void {
+    this.workerClient = workerClient;
   }
 
   joinGame(numTurns: number) {
@@ -532,6 +548,26 @@ export class Transport {
       clientID: this.lobbyConfig.clientID,
       ratio: event.ratio,
     });
+  }
+
+  private onSendBuildingDelegationEvent(event: SendBuildingDelegationEvent) {
+    // Handle building delegation locally - store in localStorage
+    localStorage.setItem(
+      "settings.buildingDelegation",
+      event.enabled.toString(),
+    );
+    localStorage.setItem(
+      "settings.buildingDelegationReserve",
+      event.goldReserve.toString(),
+    );
+
+    // Send settings to worker (Web Workers can't access localStorage)
+    if (this.workerClient) {
+      this.workerClient.sendDelegationSettings(
+        event.enabled,
+        event.goldReserve,
+      );
+    }
   }
 
   private onBuildUnitIntent(event: BuildUnitIntentEvent) {

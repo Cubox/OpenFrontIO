@@ -14,7 +14,7 @@ import { EmojiTable } from "./layers/EmojiTable";
 import { EventsDisplay } from "./layers/EventsDisplay";
 import { FxLayer } from "./layers/FxLayer";
 import { GameLeftSidebar } from "./layers/GameLeftSidebar";
-import { GutterAdModal } from "./layers/GutterAdModal";
+
 import { HeadsUpMessage } from "./layers/HeadsUpMessage";
 import { Layer } from "./layers/Layer";
 import { Leaderboard } from "./layers/Leaderboard";
@@ -26,7 +26,7 @@ import { PlayerInfoOverlay } from "./layers/PlayerInfoOverlay";
 import { PlayerPanel } from "./layers/PlayerPanel";
 import { RailroadLayer } from "./layers/RailroadLayer";
 import { ReplayPanel } from "./layers/ReplayPanel";
-import { SpawnAd } from "./layers/SpawnAd";
+
 import { SpawnTimer } from "./layers/SpawnTimer";
 import { StructureLayer } from "./layers/StructureLayer";
 import { TeamStats } from "./layers/TeamStats";
@@ -202,20 +202,6 @@ export function createRenderer(
   unitInfoModal.structureLayer = structureLayer;
   // unitInfoModal.eventBus = eventBus;
 
-  const spawnAd = document.querySelector("spawn-ad") as SpawnAd;
-  if (!(spawnAd instanceof SpawnAd)) {
-    console.error("spawn ad not found");
-  }
-  spawnAd.g = game;
-
-  const gutterAdModal = document.querySelector(
-    "gutter-ad-modal",
-  ) as GutterAdModal;
-  if (!(gutterAdModal instanceof GutterAdModal)) {
-    console.error("gutter ad modal not found");
-  }
-  gutterAdModal.eventBus = eventBus;
-
   const alertFrame = document.querySelector("alert-frame") as AlertFrame;
   if (!(alertFrame instanceof AlertFrame)) {
     console.error("alert frame not found");
@@ -257,8 +243,7 @@ export function createRenderer(
     headsUpMessage,
     unitInfoModal,
     multiTabModal,
-    spawnAd,
-    gutterAdModal,
+
     alertFrame,
   ];
 

@@ -164,7 +164,7 @@ export async function createClientGame(
     `creating private game got difficulty: ${lobbyConfig.gameStartInfo.config.difficulty}`,
   );
 
-  return new ClientGameRunner(
+  const clientGameRunner = new ClientGameRunner(
     lobbyConfig,
     eventBus,
     gameRenderer,
@@ -173,6 +173,11 @@ export async function createClientGame(
     worker,
     gameView,
   );
+
+  // Connect Transport and WorkerClient for delegation settings
+  transport.setWorkerClient(worker);
+
+  return clientGameRunner;
 }
 
 export class ClientGameRunner {

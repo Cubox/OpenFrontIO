@@ -50,6 +50,23 @@ export class UserSettings {
     this.get("settings.focusLocked", true);
   }
 
+  // Building delegation settings
+  buildingDelegationEnabled() {
+    return this.get("settings.buildingDelegation", false);
+  }
+
+  getBuildingDelegationReserve(): number {
+    const value = localStorage.getItem("settings.buildingDelegationReserve");
+    return value ? parseInt(value, 10) : 500000; // Default 500k gold reserve
+  }
+
+  setBuildingDelegationReserve(amount: number) {
+    localStorage.setItem(
+      "settings.buildingDelegationReserve",
+      amount.toString(),
+    );
+  }
+
   toggleLeftClickOpenMenu() {
     this.set("settings.leftClickOpensMenu", !this.leftClickOpensMenu());
   }
@@ -85,6 +102,10 @@ export class UserSettings {
     } else {
       document.documentElement.classList.remove("dark");
     }
+  }
+
+  toggleBuildingDelegation() {
+    this.set("settings.buildingDelegation", !this.buildingDelegationEnabled());
   }
 
   getSelectedPattern(): string | undefined {

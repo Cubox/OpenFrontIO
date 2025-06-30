@@ -167,21 +167,6 @@
     <!-- Main container with responsive padding -->
     <main class="flex justify-center flex-grow">
       <div class="container pt-12">
-        <o-button
-          id="login-discord"
-          title="Initializing..."
-          disable="true"
-          block
-        ></o-button>
-
-        <o-button
-          id="logout-discord"
-          title="Log out"
-          translationKey="main.log_out"
-          visible="false"
-          block
-        ></o-button>
-
         <div class="container__row">
           <flag-input class="w-[20%] md:w-[15%]"></flag-input>
           <territory-patterns-modal class="w-[50%] md:w-[12%]">
@@ -197,9 +182,7 @@
           ></news-button>
         </div>
         <div></div>
-        <div>
-          <public-lobby class="block"></public-lobby>
-        </div>
+
         <div class="container__row container__row--equal">
           <o-button
             id="host-lobby-button"
@@ -313,13 +296,6 @@
           >
             Wiki
           </a>
-          <a
-            target="_blank"
-            href="https://discord.gg/jRpxXvG42t"
-            class="t-link"
-          >
-            <span data-i18n="main.join_discord"> Join the Discord! </span>
-          </a>
         </div>
         <div class="l-footer__col t-text-white">
           <a
@@ -336,22 +312,6 @@
               class="ml-2 mr-4"
             />
           </a>
-          <a href="/privacy-policy.html" class="t-link" target="_blank">
-            Privacy Policy
-          </a>
-          <a href="/terms-of-service.html" class="t-link" target="_blank">
-            Terms of Service
-          </a>
-          <p style="text-align: center">
-            <a
-              href="https://www.playwire.com/contact-direct-sales"
-              data-i18n="main.advertise"
-              class="t-link"
-              target="_blank"
-              rel="noopener"
-              >Advertise</a
-            >
-          </p>
         </div>
       </div>
     </footer>
@@ -375,7 +335,7 @@
     <unit-info-modal></unit-info-modal>
     <news-modal></news-modal>
     <game-left-sidebar></game-left-sidebar>
-    <spawn-ad></spawn-ad>
+
     <div
       id="language-modal"
       class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex justify-center items-center"
@@ -403,9 +363,6 @@
         });
       });
     </script>
-
-    <!-- Playwire ads -->
-    <script async src="//cdn.intergient.com/1025558/75940/ramp.js"></script>
 
     <!-- Analytics -->
     <script

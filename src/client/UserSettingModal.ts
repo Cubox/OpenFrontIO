@@ -202,7 +202,7 @@ export class UserSettingModal extends LitElement {
           <div class="modal-content user-setting-modal">
             <div class="flex mb-4 w-full justify-center">
               <button
-                class="w-1/2 text-center px-3 py-1 rounded-l 
+                class="w-1/2 text-center px-3 py-1 rounded-l
       ${this.settingsMode === "basic"
                   ? "bg-white/10 text-white"
                   : "bg-transparent text-gray-400"}"
@@ -211,7 +211,7 @@ export class UserSettingModal extends LitElement {
                 ${translateText("user_setting.tab_basic")}
               </button>
               <button
-                class="w-1/2 text-center px-3 py-1 rounded-r 
+                class="w-1/2 text-center px-3 py-1 rounded-r
       ${this.settingsMode === "keybinds"
                   ? "bg-white/10 text-white"
                   : "bg-transparent text-gray-400"}"
@@ -240,8 +240,7 @@ export class UserSettingModal extends LitElement {
         description="${translateText("user_setting.dark_mode_desc")}"
         id="dark-mode-toggle"
         .checked=${this.userSettings.darkMode()}
-        @change=${(e: CustomEvent<{ checked: boolean }>) =>
-          this.toggleDarkMode(e)}
+        @change=${this.toggleDarkMode}
       ></setting-toggle>
 
       <!-- 😊 Emojis -->
