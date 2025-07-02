@@ -495,6 +495,7 @@ export class DefaultConfig implements Config {
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
           canBuildTrainStation: true,
+          experimental: true,
           upgradable: true,
         };
       case UnitType.Construction:
@@ -506,6 +507,7 @@ export class DefaultConfig implements Config {
         return {
           cost: () => 0n,
           territoryBound: false,
+          experimental: true,
         };
       default:
         assertNever(type);
