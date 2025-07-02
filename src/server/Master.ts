@@ -90,25 +90,9 @@ export async function startMaster() {
       log.info(
         `Worker ${workerId} is ready. (${readyWorkers.size}/${config.numWorkers()} ready)`,
       );
-      // Start scheduling when all workers are ready
+      // Public game scheduling disabled for Cubox version
       if (readyWorkers.size === config.numWorkers()) {
-        log.info("All workers ready, starting game scheduling");
-
-        const scheduleLobbies = () => {
-          schedulePublicGame(playlist).catch((error) => {
-            log.error("Error scheduling public game:", error);
-          });
-        };
-
-        setInterval(
-          () =>
-            fetchLobbies().then((lobbies) => {
-              if (lobbies === 0) {
-                scheduleLobbies();
-              }
-            }),
-          100,
-        );
+        log.info("All workers ready (public game scheduling disabled)");
       }
     }
   });
@@ -136,7 +120,7 @@ export async function startMaster() {
     );
   });
 
-  const PORT = 3000;
+  const PORT = 3564;
   server.listen(PORT, () => {
     log.info(`Master HTTP server listening on port ${PORT}`);
   });
@@ -152,11 +136,11 @@ app.get(
   }),
 );
 
-// Add lobbies endpoint to list public games for this worker
+// Public lobbies disabled - return empty list
 app.get(
   "/api/public_lobbies",
   gatekeeper.httpHandler(LimiterType.Get, async (req, res) => {
-    res.send(publicLobbiesJsonStr);
+    res.send(JSON.stringify({ lobbies: [] }));
   }),
 );
 

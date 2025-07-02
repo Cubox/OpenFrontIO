@@ -37,11 +37,13 @@ import { getPersistentID } from "./Main";
 import {
   SendAttackIntentEvent,
   SendBoatAttackIntentEvent,
+  SendBuildingDelegationEvent,
   SendHashEvent,
   SendSpawnIntentEvent,
   Transport,
 } from "./Transport";
 import { createCanvas } from "./Utils";
+import { ClientAutobuild } from "./autobuild/ClientAutobuild";
 import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
 
 export interface LobbyConfig {
@@ -165,7 +167,7 @@ export async function createClientGame(
     `creating private game got difficulty: ${lobbyConfig.gameStartInfo.config.difficulty}`,
   );
 
-  return new ClientGameRunner(
+  const clientGameRunner = new ClientGameRunner(
     lobbyConfig,
     eventBus,
     gameRenderer,
@@ -174,6 +176,8 @@ export async function createClientGame(
     worker,
     gameView,
   );
+
+  return clientGameRunner;
 }
 
 export class ClientGameRunner {
@@ -188,6 +192,8 @@ export class ClientGameRunner {
   private lastMessageTime: number = 0;
   private connectionCheckInterval: NodeJS.Timeout | null = null;
 
+  private autobuild: ClientAutobuild;
+
   constructor(
     private lobby: LobbyConfig,
     private eventBus: EventBus,
@@ -198,6 +204,28 @@ export class ClientGameRunner {
     private gameView: GameView,
   ) {
     this.lastMessageTime = Date.now();
+
+    // Initialize client-side autobuild
+    this.autobuild = new ClientAutobuild(eventBus, gameView);
+
+    // Load initial settings from localStorage
+    const savedEnabled = localStorage.getItem("settings.buildingDelegation");
+    const savedReserve = localStorage.getItem(
+      "settings.buildingDelegationReserve",
+    );
+
+    if (savedEnabled !== null) {
+      this.autobuild.setEnabled(savedEnabled === "true");
+    }
+    if (savedReserve !== null) {
+      this.autobuild.setGoldReserve(parseInt(savedReserve, 10));
+    }
+
+    // Listen for delegation settings from control panel
+    this.eventBus.on(SendBuildingDelegationEvent, (event) => {
+      this.autobuild.setEnabled(event.enabled);
+      this.autobuild.setGoldReserve(event.goldReserve);
+    });
   }
 
   private getWinner(update: WinUpdate): Winner {
@@ -282,6 +310,9 @@ export class ClientGameRunner {
       });
       this.gameView.update(gu);
       this.renderer.tick();
+
+      // Tick client-side autobuild
+      this.autobuild.tick();
 
       if (gu.updates[GameUpdateType.Win].length > 0) {
         this.saveGame(gu.updates[GameUpdateType.Win][0]);

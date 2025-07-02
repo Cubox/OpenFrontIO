@@ -177,6 +177,9 @@ export class UnitInfoModal extends LitElement implements Layer {
     }
     const secondsLeft = Math.ceil(cooldown / 10);
 
+    // Check if upgrade would be beneficial
+    const isUpgradeBeneficial = this.isUpgradeBeneficial();
+
     return html`
       <div
         class="modal"
@@ -222,12 +225,17 @@ export class UnitInfoModal extends LitElement implements Layer {
               }
             }}
             class="upgrade-button"
-            title="${translateText("unit_info_modal.upgrade")}"
+            title="${!isUpgradeBeneficial
+              ? "Max level reached - further upgrades provide no benefit"
+              : translateText("unit_info_modal.upgrade")}"
             style="width: 100px; height: 32px; display: ${this.game.unitInfo(
               this.unit.type(),
             ).upgradable
               ? "block"
-              : "none"};"
+              : "none"}; ${!isUpgradeBeneficial
+              ? "opacity: 0.5; cursor: not-allowed;"
+              : ""}"
+            ?disabled=${!isUpgradeBeneficial}
           >
             ${translateText("unit_info_modal.upgrade")}
           </button>
@@ -270,5 +278,50 @@ export class UnitInfoModal extends LitElement implements Layer {
         </div>
       </div>
     `;
+  }
+
+  private isUpgradeBeneficial(): boolean {
+    if (!this.unit) return false;
+
+    const currentLevel = this.unit.level();
+    const unitType = this.unit.type();
+
+    switch (unitType) {
+      case UnitType.Port: {
+        // For ports, calculate if upgrading would decrease spawn rate number (increase probability)
+        const totalPorts = this.game.units(UnitType.Port).length;
+        const baseSpawnRate = Math.min(
+          50,
+          Math.round(10 * Math.pow(totalPorts, 0.6)),
+        );
+
+        const currentMultiplier = Math.pow(1.5, currentLevel - 1);
+        const nextMultiplier = Math.pow(1.5, currentLevel);
+
+        const currentSpawnRate = Math.max(
+          1,
+          Math.round(baseSpawnRate / currentMultiplier),
+        );
+        const nextSpawnRate = Math.max(
+          1,
+          Math.round(baseSpawnRate / nextMultiplier),
+        );
+
+        // Only beneficial if next level decreases spawn rate number (higher probability)
+        // Since chance(X) means 1/X probability, lower X = higher probability
+        return nextSpawnRate < currentSpawnRate;
+      }
+
+      // For other upgradable structures, upgrades are always beneficial
+      // (factories increase gold income, cities increase population, etc.)
+      case UnitType.Factory:
+      case UnitType.City:
+      case UnitType.MissileSilo:
+      case UnitType.SAMLauncher:
+        return true;
+
+      default:
+        return true;
+    }
   }
 }

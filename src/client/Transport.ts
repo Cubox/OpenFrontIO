@@ -146,6 +146,13 @@ export class SendSetTargetTroopRatioEvent implements GameEvent {
   constructor(public readonly ratio: number) {}
 }
 
+export class SendBuildingDelegationEvent implements GameEvent {
+  constructor(
+    public readonly enabled: boolean,
+    public readonly goldReserve: number,
+  ) {}
+}
+
 export class SendWinnerEvent implements GameEvent {
   constructor(
     public readonly winner: Winner,
@@ -226,6 +233,9 @@ export class Transport {
     );
     this.eventBus.on(SendSetTargetTroopRatioEvent, (e) =>
       this.onSendSetTargetTroopRatioEvent(e),
+    );
+    this.eventBus.on(SendBuildingDelegationEvent, (e) =>
+      this.onSendBuildingDelegationEvent(e),
     );
     this.eventBus.on(BuildUnitIntentEvent, (e) => this.onBuildUnitIntent(e));
 
@@ -532,6 +542,18 @@ export class Transport {
       clientID: this.lobbyConfig.clientID,
       ratio: event.ratio,
     });
+  }
+
+  private onSendBuildingDelegationEvent(event: SendBuildingDelegationEvent) {
+    // Store delegation settings in localStorage for persistence
+    localStorage.setItem(
+      "settings.buildingDelegation",
+      event.enabled.toString(),
+    );
+    localStorage.setItem(
+      "settings.buildingDelegationReserve",
+      event.goldReserve.toString(),
+    );
   }
 
   private onBuildUnitIntent(event: BuildUnitIntentEvent) {

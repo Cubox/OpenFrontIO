@@ -10,7 +10,7 @@ import { DarkModeButton } from "./DarkModeButton";
 import "./FlagInput";
 import { FlagInput } from "./FlagInput";
 import { GameStartingModal } from "./GameStartingModal";
-import "./GoogleAdElement";
+
 import { HelpModal } from "./HelpModal";
 import { HostLobbyModal as HostPrivateLobbyModal } from "./HostLobbyModal";
 import { JoinPrivateLobbyModal } from "./JoinPrivateLobbyModal";
@@ -29,9 +29,7 @@ import { generateCryptoRandomUUID, incrementGamesPlayed } from "./Utils";
 import "./components/NewsButton";
 import { NewsButton } from "./components/NewsButton";
 import "./components/baseComponents/Button";
-import { OButton } from "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
-import { discordLogin, getUserMe, isLoggedIn, logOut } from "./jwt";
 import "./styles.css";
 
 declare global {
@@ -40,16 +38,6 @@ declare global {
       session: {
         newPageView: () => void;
       };
-    };
-    ramp: {
-      que: Array<() => void>;
-      passiveMode: boolean;
-      spaAddAds: (ads: Array<{ type: string; selectorId: string }>) => void;
-      destroyUnits: (adType: string) => void;
-      settings?: {
-        slots?: any;
-      };
-      spaNewPage: (url: string) => void;
     };
   }
 }
@@ -126,13 +114,6 @@ class Client {
       console.warn("Dark mode button element not found");
     }
 
-    const loginDiscordButton = document.getElementById(
-      "login-discord",
-    ) as OButton;
-    const logoutDiscordButton = document.getElementById(
-      "logout-discord",
-    ) as OButton;
-
     this.usernameInput = document.querySelector(
       "username-input",
     ) as UsernameInput;
@@ -141,6 +122,9 @@ class Client {
     }
 
     this.publicLobby = document.querySelector("public-lobby") as PublicLobby;
+    if (!this.publicLobby) {
+      console.warn("Public lobby element not found - public lobbies disabled");
+    }
 
     window.addEventListener("beforeunload", () => {
       console.log("Browser is closing");
@@ -201,47 +185,8 @@ class Client {
       territoryModal.open();
     });
 
-    if (isLoggedIn() === false) {
-      // Not logged in
-      loginDiscordButton.disable = false;
-      loginDiscordButton.translationKey = "main.login_discord";
-      loginDiscordButton.addEventListener("click", discordLogin);
-      logoutDiscordButton.hidden = true;
-    } else {
-      // JWT appears to be valid
-      loginDiscordButton.disable = true;
-      loginDiscordButton.translationKey = "main.checking_login";
-      logoutDiscordButton.hidden = false;
-      logoutDiscordButton.addEventListener("click", () => {
-        // Log out
-        logOut();
-        loginDiscordButton.disable = false;
-        loginDiscordButton.translationKey = "main.login_discord";
-        loginDiscordButton.hidden = false;
-        loginDiscordButton.addEventListener("click", discordLogin);
-        logoutDiscordButton.hidden = true;
-        territoryModal.onLogout();
-      });
-      // Look up the discord user object.
-      // TODO: Add caching
-      getUserMe().then((userMeResponse) => {
-        if (userMeResponse === false) {
-          // Not logged in
-          loginDiscordButton.disable = false;
-          loginDiscordButton.translationKey = "main.login_discord";
-          loginDiscordButton.addEventListener("click", discordLogin);
-          logoutDiscordButton.hidden = true;
-          return;
-        }
-        console.log(
-          `Your player ID is ${userMeResponse.player.publicId}\n` +
-            "Sharing this ID will allow others to view your game history and stats.",
-        );
-        loginDiscordButton.translationKey = "main.logged_in";
-        loginDiscordButton.hidden = true;
-        territoryModal.onUserMe(userMeResponse);
-      });
-    }
+    // Remove Discord login - always call onLogout to ensure patterns are unlocked
+    territoryModal.onLogout();
 
     const settingsModal = document.querySelector(
       "user-setting",
@@ -262,7 +207,7 @@ class Client {
     hostLobbyButton.addEventListener("click", () => {
       if (this.usernameInput?.isValid()) {
         hostModal.open();
-        this.publicLobby.leaveLobby();
+        this.publicLobby?.leaveLobby();
       }
     });
 
@@ -380,10 +325,7 @@ class Client {
             modal.isModalOpen = false;
           }
         });
-        this.publicLobby.stop();
-        document.querySelectorAll(".ad").forEach((ad) => {
-          (ad as HTMLElement).style.display = "none";
-        });
+        this.publicLobby?.stop();
 
         // show when the game loads
         const startingModal = document.querySelector(
@@ -394,7 +336,7 @@ class Client {
       },
       () => {
         this.joinModal.close();
-        this.publicLobby.stop();
+        this.publicLobby?.stop();
         incrementGamesPlayed();
 
         try {
@@ -402,10 +344,6 @@ class Client {
         } catch (e) {
           console.error("Error calling newPageView", e);
         }
-
-        document.querySelectorAll(".ad").forEach((ad) => {
-          (ad as HTMLElement).style.display = "none";
-        });
 
         if (lobby.gameStartInfo?.config.gameType !== GameType.Singleplayer) {
           history.pushState(null, "", `#join=${lobby.gameID}`);
@@ -421,7 +359,7 @@ class Client {
     console.log("leaving lobby, cancelling game");
     this.gameStop();
     this.gameStop = null;
-    this.publicLobby.leaveLobby();
+    this.publicLobby?.leaveLobby();
   }
 }
 
@@ -440,15 +378,11 @@ function setFavicon(): void {
 
 // WARNING: DO NOT EXPOSE THIS ID
 function getPlayToken(): string {
-  const result = isLoggedIn();
-  if (result !== false) return result.token;
   return getPersistentIDFromCookie();
 }
 
 // WARNING: DO NOT EXPOSE THIS ID
 export function getPersistentID(): string {
-  const result = isLoggedIn();
-  if (result !== false) return result.claims.sub;
   return getPersistentIDFromCookie();
 }
 

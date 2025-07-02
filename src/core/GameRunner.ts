@@ -101,6 +101,7 @@ export class GameRunner {
     if (this.game.config().spawnNPCs()) {
       this.game.addExecution(...this.execManager.fakeHumanExecutions());
     }
+
     this.game.addExecution(new WinCheckExecution());
   }
 
@@ -117,9 +118,12 @@ export class GameRunner {
     }
     this.isExecuting = true;
 
-    this.game.addExecution(
-      ...this.execManager.createExecs(this.turns[this.currTurn]),
+    // Process all intents in the current turn
+    const turn = this.turns[this.currTurn];
+    const executions = turn.intents.map((intent) =>
+      this.execManager.createExec(intent),
     );
+    this.game.addExecution(...executions);
     this.currTurn++;
 
     let updates: GameUpdates;

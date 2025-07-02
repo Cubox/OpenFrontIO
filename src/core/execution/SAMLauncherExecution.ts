@@ -37,9 +37,12 @@ export class SAMLauncherExecution implements Execution {
 
   private getSingleTarget(): Unit | null {
     if (this.sam === null) return null;
+    // 10% range increase per level
+    const levelMultiplier = 1 + (this.sam.level() - 1) * 0.1;
+    const effectiveRange = this.mg.config().defaultSamRange() * levelMultiplier;
     const nukes = this.mg.nearbyUnits(
       this.sam.tile(),
-      this.mg.config().defaultSamRange(),
+      effectiveRange,
       [UnitType.AtomBomb, UnitType.HydrogenBomb],
       ({ unit }) =>
         unit.owner() !== this.player &&
@@ -113,9 +116,15 @@ export class SAMLauncherExecution implements Execution {
       this.pseudoRandom = new PseudoRandom(this.sam.id());
     }
 
+    // 10% range increase per level for MIRV detection too
+    const levelMultiplier = 1 + (this.sam.level() - 1) * 0.1;
+    const effectiveMIRVRange = this.MIRVWarheadSearchRadius * levelMultiplier;
+    const effectiveProtectionRange =
+      this.MIRVWarheadProtectionRadius * levelMultiplier;
+
     const mirvWarheadTargets = this.mg.nearbyUnits(
       this.sam.tile(),
-      this.MIRVWarheadSearchRadius,
+      effectiveMIRVRange,
       UnitType.MIRVWarhead,
       ({ unit }) => {
         if (unit.owner() === this.player) return false;
@@ -124,8 +133,7 @@ export class SAMLauncherExecution implements Execution {
         return (
           this.sam !== null &&
           dst !== undefined &&
-          this.mg.manhattanDist(dst, this.sam.tile()) <
-            this.MIRVWarheadProtectionRadius
+          this.mg.manhattanDist(dst, this.sam.tile()) < effectiveProtectionRange
         );
       },
     );

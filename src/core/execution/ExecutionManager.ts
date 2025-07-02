@@ -1,6 +1,6 @@
 import { Execution, Game } from "../game/Game";
 import { PseudoRandom } from "../PseudoRandom";
-import { ClientID, GameID, Intent, Turn } from "../Schemas";
+import { ClientID, GameID, Intent } from "../Schemas";
 import { simpleHash } from "../Util";
 import { AllianceRequestExecution } from "./alliance/AllianceRequestExecution";
 import { AllianceRequestReplyExecution } from "./alliance/AllianceRequestReplyExecution";
@@ -37,10 +37,6 @@ export class Executor {
   ) {
     // Add one to avoid id collisions with bots.
     this.random = new PseudoRandom(simpleHash(gameID) + 1);
-  }
-
-  createExecs(turn: Turn): Execution[] {
-    return turn.intents.map((i) => this.createExec(i));
   }
 
   createExec(intent: Intent): Execution {

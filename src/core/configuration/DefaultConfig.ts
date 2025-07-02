@@ -186,7 +186,7 @@ export abstract class DefaultServerConfig implements ServerConfig {
     return this.workerPortByIndex(this.workerIndex(gameID));
   }
   workerPortByIndex(index: number): number {
-    return 3001 + index;
+    return 3565 + index;
   }
 }
 
@@ -299,7 +299,7 @@ export class DefaultConfig implements Config {
     return BigInt(Math.floor(10000 + 150 * Math.pow(dist, 1.1)));
   }
   tradeShipSpawnRate(numberOfPorts: number): number {
-    return Math.min(50, Math.round(10 * Math.pow(numberOfPorts, 0.6)));
+    return Math.min(50, Math.round(5 * Math.pow(numberOfPorts, 0.6)));
   }
   trainSpawnRate(numberOfStations: number): number {
     return Math.min(1400, Math.round(60 * Math.pow(numberOfStations, 0.8)));
@@ -317,6 +317,27 @@ export class DefaultConfig implements Config {
     return 100;
   }
 
+  // Helper function to count units for both Player and PlayerView
+  private countUnitsForCost(
+    player: Player | PlayerView,
+    type: UnitType,
+  ): number {
+    if ("unitsConstructed" in player) {
+      // Player has unitsConstructed method
+      return player.unitsConstructed(type);
+    } else {
+      // PlayerView - count current units + construction units
+      let count = player.units(type).length;
+      const constructionUnits = player.units(UnitType.Construction);
+      for (const unit of constructionUnits) {
+        if (unit.constructionType() === type) {
+          count++;
+        }
+      }
+      return count;
+    }
+  }
+
   unitInfo(type: UnitType): UnitInfo {
     switch (type) {
       case UnitType.TransportShip:
@@ -326,13 +347,13 @@ export class DefaultConfig implements Config {
         };
       case UnitType.Warship:
         return {
-          cost: (p: Player) =>
+          cost: (p: Player | PlayerView) =>
             p.type() === PlayerType.Human && this.infiniteGold()
               ? 0n
               : BigInt(
                   Math.min(
                     1_000_000,
-                    (p.unitsOwned(UnitType.Warship) + 1) * 250_000,
+                    (this.countUnitsForCost(p, UnitType.Warship) + 1) * 250_000,
                   ),
                 ),
           territoryBound: false,
@@ -351,13 +372,14 @@ export class DefaultConfig implements Config {
         };
       case UnitType.Port:
         return {
-          cost: (p: Player) =>
+          cost: (p: Player | PlayerView) =>
             p.type() === PlayerType.Human && this.infiniteGold()
               ? 0n
               : BigInt(
                   Math.min(
                     1_000_000,
-                    Math.pow(2, p.unitsConstructed(UnitType.Port)) * 125_000,
+                    Math.pow(2, this.countUnitsForCost(p, UnitType.Port)) *
+                      125_000,
                   ),
                 ),
           territoryBound: true,
@@ -367,7 +389,7 @@ export class DefaultConfig implements Config {
         };
       case UnitType.AtomBomb:
         return {
-          cost: (p: Player) =>
+          cost: (p: Player | PlayerView) =>
             p.type() === PlayerType.Human && this.infiniteGold()
               ? 0n
               : 750_000n,
@@ -375,7 +397,7 @@ export class DefaultConfig implements Config {
         };
       case UnitType.HydrogenBomb:
         return {
-          cost: (p: Player) =>
+          cost: (p: Player | PlayerView) =>
             p.type() === PlayerType.Human && this.infiniteGold()
               ? 0n
               : 5_000_000n,
@@ -383,7 +405,7 @@ export class DefaultConfig implements Config {
         };
       case UnitType.MIRV:
         return {
-          cost: (p: Player) =>
+          cost: (p: Player | PlayerView) =>
             p.type() === PlayerType.Human && this.infiniteGold()
               ? 0n
               : 25_000_000n,
@@ -401,7 +423,7 @@ export class DefaultConfig implements Config {
         };
       case UnitType.MissileSilo:
         return {
-          cost: (p: Player) =>
+          cost: (p: Player | PlayerView) =>
             p.type() === PlayerType.Human && this.infiniteGold()
               ? 0n
               : 1_000_000n,
@@ -411,28 +433,30 @@ export class DefaultConfig implements Config {
         };
       case UnitType.DefensePost:
         return {
-          cost: (p: Player) =>
+          cost: (p: Player | PlayerView) =>
             p.type() === PlayerType.Human && this.infiniteGold()
               ? 0n
               : BigInt(
                   Math.min(
                     250_000,
-                    (p.unitsConstructed(UnitType.DefensePost) + 1) * 50_000,
+                    (this.countUnitsForCost(p, UnitType.DefensePost) + 1) *
+                      50_000,
                   ),
                 ),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 5 * 10,
-          upgradable: true,
+          upgradable: false,
         };
       case UnitType.SAMLauncher:
         return {
-          cost: (p: Player) =>
+          cost: (p: Player | PlayerView) =>
             p.type() === PlayerType.Human && this.infiniteGold()
               ? 0n
               : BigInt(
                   Math.min(
                     3_000_000,
-                    (p.unitsConstructed(UnitType.SAMLauncher) + 1) * 1_500_000,
+                    (this.countUnitsForCost(p, UnitType.SAMLauncher) + 1) *
+                      1_500_000,
                   ),
                 ),
           territoryBound: true,
@@ -441,13 +465,14 @@ export class DefaultConfig implements Config {
         };
       case UnitType.City:
         return {
-          cost: (p: Player) =>
+          cost: (p: Player | PlayerView) =>
             p.type() === PlayerType.Human && this.infiniteGold()
               ? 0n
               : BigInt(
                   Math.min(
                     1_000_000,
-                    Math.pow(2, p.unitsConstructed(UnitType.City)) * 125_000,
+                    Math.pow(2, this.countUnitsForCost(p, UnitType.City)) *
+                      125_000,
                   ),
                 ),
           territoryBound: true,
@@ -457,19 +482,21 @@ export class DefaultConfig implements Config {
         };
       case UnitType.Factory:
         return {
-          cost: (p: Player) =>
+          cost: (p: Player | PlayerView) =>
             p.type() === PlayerType.Human && this.infiniteGold()
               ? 0n
               : BigInt(
                   Math.min(
                     1_000_000,
-                    Math.pow(2, p.unitsConstructed(UnitType.Factory)) * 125_000,
+                    Math.pow(2, this.countUnitsForCost(p, UnitType.Factory)) *
+                      125_000,
                   ),
                 ),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
           canBuildTrainStation: true,
           experimental: true,
+          upgradable: true,
         };
       case UnitType.Construction:
         return {
@@ -761,7 +788,16 @@ export class DefaultConfig implements Config {
   }
 
   goldAdditionRate(player: Player): Gold {
-    return BigInt(Math.floor(0.045 * player.workers() ** 0.7));
+    const baseGold = BigInt(Math.floor(0.045 * player.workers() ** 0.7));
+
+    // 5% gold bonus per factory level
+    const factories = player.units(UnitType.Factory);
+    const factoryBonus = factories.reduce((total, factory) => {
+      return total + factory.level() * 0.05;
+    }, 0);
+
+    const bonusMultiplier = 1 + factoryBonus;
+    return BigInt(Math.floor(Number(baseGold) * bonusMultiplier));
   }
 
   troopAdjustmentRate(player: Player): number {
