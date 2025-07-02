@@ -11,7 +11,6 @@ import {
   GameStartInfo,
   GameStartInfoSchema,
   Intent,
-  PlayerRecord,
   ServerDesyncSchema,
   ServerErrorMessage,
   ServerPrestartMessageSchema,
@@ -19,10 +18,8 @@ import {
   ServerTurnMessage,
   Turn,
 } from "../core/Schemas";
-import { createGameRecord } from "../core/Util";
 import { GameEnv, ServerConfig } from "../core/configuration/Config";
 import { GameType, UnitType } from "../core/game/Game";
-import { archive } from "./Archive";
 import { Client } from "./Client";
 import { gatekeeper } from "./Gatekeeper";
 export enum GamePhase {
@@ -607,38 +604,11 @@ export class GameServer {
   }
 
   private archiveGame() {
-    this.log.info("archiving game", {
+    // Archiving disabled
+    this.log.info("archive skipped (storage disabled)", {
       gameID: this.id,
       winner: this.winner?.winner,
     });
-
-    // Players must stay in the same order as the game start info.
-    const playerRecords: PlayerRecord[] = this.gameStartInfo.players.map(
-      (player) => {
-        const stats = this.winner?.allPlayersStats[player.clientID];
-        if (stats === undefined) {
-          this.log.warn(`Unable to find stats for clientID ${player.clientID}`);
-        }
-        return {
-          clientID: player.clientID,
-          username: player.username,
-          persistentID:
-            this.allClients.get(player.clientID)?.persistentID ?? "",
-          stats,
-        } satisfies PlayerRecord;
-      },
-    );
-    archive(
-      createGameRecord(
-        this.id,
-        this.gameStartInfo.config,
-        playerRecords,
-        this.turns,
-        this._startTime ?? 0,
-        Date.now(),
-        this.winner?.winner,
-      ),
-    );
   }
 
   private handleSynchronization() {

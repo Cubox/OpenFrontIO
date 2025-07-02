@@ -6,18 +6,11 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { WebSocket, WebSocketServer } from "ws";
 import { z } from "zod/v4";
-import { GameEnv } from "../core/configuration/Config";
 import { getServerConfigFromServer } from "../core/configuration/ConfigLoader";
 import { COSMETICS } from "../core/CosmeticSchemas";
 import { GameType } from "../core/game/Game";
-import {
-  ClientMessageSchema,
-  GameRecord,
-  GameRecordSchema,
-  ServerErrorMessage,
-} from "../core/Schemas";
+import { ClientMessageSchema, ServerErrorMessage } from "../core/Schemas";
 import { CreateGameInputSchema, GameInputSchema } from "../core/WorkerSchemas";
-import { archive, readGameRecord } from "./Archive";
 import { Client } from "./Client";
 import { GameManager } from "./GameManager";
 import { gatekeeper, LimiterType } from "./Gatekeeper";
@@ -206,63 +199,6 @@ export function startWorker() {
         return res.status(404).json({ error: "Game not found" });
       }
       res.json(game.gameInfo());
-    }),
-  );
-
-  app.get(
-    "/api/archived_game/:id",
-    gatekeeper.httpHandler(LimiterType.Get, async (req, res) => {
-      const gameRecord = await readGameRecord(req.params.id);
-
-      if (!gameRecord) {
-        return res.status(404).json({
-          success: false,
-          error: "Game not found",
-          exists: false,
-        });
-      }
-
-      if (
-        config.env() !== GameEnv.Dev &&
-        gameRecord.gitCommit !== config.gitCommit()
-      ) {
-        log.warn(
-          `git commit mismatch for game ${req.params.id}, expected ${config.gitCommit()}, got ${gameRecord.gitCommit}`,
-        );
-        return res.status(409).json({
-          success: false,
-          error: "Version mismatch",
-          exists: true,
-          details: {
-            expectedCommit: config.gitCommit(),
-            actualCommit: gameRecord.gitCommit,
-          },
-        });
-      }
-
-      return res.status(200).json({
-        success: true,
-        exists: true,
-        gameRecord: gameRecord,
-      });
-    }),
-  );
-
-  app.post(
-    "/api/archive_singleplayer_game",
-    gatekeeper.httpHandler(LimiterType.Post, async (req, res) => {
-      const result = GameRecordSchema.safeParse(req.body);
-      if (!result.success) {
-        const error = z.prettifyError(result.error);
-        log.info(error);
-        return res.status(400).json({ error });
-      }
-
-      const gameRecord: GameRecord = result.data;
-      archive(gameRecord);
-      res.json({
-        success: true,
-      });
     }),
   );
 
