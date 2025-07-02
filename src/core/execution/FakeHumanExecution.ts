@@ -47,6 +47,7 @@ export class FakeHumanExecution implements Execution {
   private lastNukeSent: [Tick, TileRef][] = [];
   private embargoMalusApplied = new Set<PlayerID>();
   private heckleEmoji: number[];
+  private lastMassRetaliation = new Map<PlayerID, Tick>();
 
   constructor(
     gameID: GameID,
@@ -55,7 +56,7 @@ export class FakeHumanExecution implements Execution {
     this.random = new PseudoRandom(
       simpleHash(nation.playerInfo.id) + simpleHash(gameID),
     );
-    this.attackRate = this.random.nextInt(40, 80);
+    this.attackRate = this.random.nextInt(10, 20);
     this.attackTick = this.random.nextInt(0, this.attackRate);
     this.triggerRatio = this.random.nextInt(60, 90) / 100;
     this.reserveRatio = this.random.nextInt(30, 60) / 100;
@@ -303,6 +304,12 @@ export class FakeHumanExecution implements Execution {
       return;
     }
 
+    // Detect whether the opponent is actively attacking or nuking us
+    const isActiveAttacker = this.isActiveAttacker(other);
+
+    // NEW: determine if the opponent currently poses a serious threat.
+    const underThreat = this.isExistentialThreat(other);
+
     const structures = other.units(
       UnitType.City,
       UnitType.DefensePost,
@@ -322,8 +329,13 @@ export class FakeHumanExecution implements Execution {
     this.removeOldNukeEvents();
     outer: for (const tile of new Set(allTiles)) {
       if (tile === null) continue;
-      for (const t of this.mg.bfs(tile, manhattanDistFN(tile, 15))) {
-        // Make sure we nuke at least 15 tiles in border
+      // Reduce the required depth inside enemy territory when we're under heavy attack
+      const requiredRadius = underThreat ? 5 : 15;
+      for (const t of this.mg.bfs(
+        tile,
+        manhattanDistFN(tile, requiredRadius),
+      )) {
+        // Ensure most of the blast radius is still in enemy territory
         if (this.mg.owner(t) !== other) {
           continue outer;
         }
@@ -334,8 +346,61 @@ export class FakeHumanExecution implements Execution {
         bestValue = value;
       }
     }
+
+    const readySilos = silos.filter((s) => !s.isInCooldown());
+
+    // Determine number of launches. If enemy's incoming force is > 2x our troops, keep firing until broke.
+    let launches = 1;
+    if (isActiveAttacker) {
+      const incomingTroops = this.player
+        .incomingAttacks()
+        .filter((a) => a.attacker() === other && a.isActive())
+        .reduce((sum, a) => sum + a.troops(), 0);
+      const lastRiposte = this.lastMassRetaliation.get(other.id()) ?? -Infinity;
+      const riposteCooldown = 500; // ticks before we retaliate again
+      const isTimeForRiposte = this.mg.ticks() - lastRiposte > riposteCooldown;
+
+      if (incomingTroops > this.player.troops() * 2 && isTimeForRiposte) {
+        // Launch until out of affordable nukes or silos
+        launches = Number.MAX_SAFE_INTEGER;
+      } else {
+        launches = readySilos.length;
+      }
+    }
+
+    if (
+      launches === Number.MAX_SAFE_INTEGER ||
+      launches > readySilos.length / 2
+    ) {
+      // Record riposte timestamp to avoid frequent mass nuking
+      this.lastMassRetaliation.set(other.id(), this.mg.ticks());
+    }
+
     if (bestTile !== null) {
-      this.sendSmartNuke(bestTile, other, bestValue);
+      let launched = 0;
+      const cheapCost = this.cost(UnitType.AtomBomb);
+      for (let i = 0; i < launches && launched < readySilos.length; i++) {
+        if (this.player.gold() < cheapCost) break;
+        this.sendSmartNuke(bestTile, other, bestValue);
+        launched++;
+      }
+    } else if (underThreat) {
+      // Fallback: nuke the center of the biggest incoming attack stack
+      const incoming = this.player
+        .incomingAttacks()
+        .filter((a) => a.attacker() === other && a.isActive());
+      if (incoming.length > 0) {
+        const largest = incoming.reduce(
+          (max, a) => (a.troops() > max.troops() ? a : max),
+          incoming[0],
+        );
+        const pos = largest.averagePosition();
+        if (pos !== null) {
+          const tile = this.mg.ref(Math.round(pos.x), Math.round(pos.y));
+          const dummyValue = 50_000; // arbitrary value to favor MIRV/hydrogen if affordable
+          this.sendSmartNuke(tile, other, dummyValue);
+        }
+      }
     }
   }
 
@@ -390,16 +455,16 @@ export class FakeHumanExecution implements Execution {
     if (this.player === null) throw new Error("not initialized");
 
     // Enemy is existential threat if:
-    // 1. They have significantly more territory than us
+    // 1. They control notably more territory than us
     const territoryRatio =
       enemy.numTilesOwned() / Math.max(1, this.player.numTilesOwned());
-    if (territoryRatio > 3.0) return true;
+    if (territoryRatio > 2.0) return true;
 
-    // 2. They have much more military power
+    // 2. They field a substantially larger army
     const troopRatio = enemy.troops() / Math.max(1, this.player.troops());
-    if (troopRatio > 4.0) return true;
+    if (troopRatio > 2.5) return true;
 
-    // 3. They are attacking us with large forces
+    // 3. Their active invasion force is sizeable
     const incomingAttacks = this.player
       .incomingAttacks()
       .filter((a) => a.attacker() === enemy);
@@ -407,7 +472,7 @@ export class FakeHumanExecution implements Execution {
       (sum, a) => sum + a.troops(),
       0,
     );
-    if (totalIncomingTroops > this.player.troops() * 0.5) return true;
+    if (totalIncomingTroops > this.player.troops() * 0.25) return true;
 
     return false;
   }
@@ -589,9 +654,14 @@ export class FakeHumanExecution implements Execution {
       return false;
     }
 
-    if (this.player.gold() < this.cost(type)) {
+    const cost = this.cost(type);
+    const goldReserve = this.calculateGoldReserve();
+
+    // Only build if we can afford it while maintaining gold reserve
+    if (this.player.gold() - cost < goldReserve) {
       return false;
     }
+
     const tile = this.structureSpawnTile(type);
     if (tile === null) {
       return false;
@@ -614,7 +684,8 @@ export class FakeHumanExecution implements Execution {
     if (upgradableUnits.length === 0) return false;
 
     const cost = this.mg.unitInfo(type).cost(this.player);
-    if (this.player.gold() < cost) return false;
+    const goldReserve = this.calculateGoldReserve();
+    if (this.player.gold() - cost < goldReserve) return false;
 
     // Find the lowest level unit that would benefit from upgrading
     let bestCandidate: Unit | null = null;
@@ -661,7 +732,10 @@ export class FakeHumanExecution implements Execution {
     if (this.player === null) throw new Error("not initialized");
 
     const cost = this.mg.unitInfo(type).cost(this.player);
-    if (this.player.gold() < cost) {
+    const goldReserve = this.calculateGoldReserve();
+
+    // Only build if we can afford it while maintaining gold reserve
+    if (this.player.gold() - cost < goldReserve) {
       return false;
     }
 
@@ -681,13 +755,20 @@ export class FakeHumanExecution implements Execution {
 
   private structureSpawnTile(type: UnitType): TileRef | null {
     if (this.player === null) throw new Error("not initialized");
-    const tiles =
-      type === UnitType.Port
-        ? Array.from(this.player.borderTiles()).filter((t) =>
-            this.mg.isOceanShore(t),
-          )
-        : Array.from(this.player.tiles());
-    if (tiles.length === 0) return null;
+
+    let tiles: TileRef[];
+    if (type === UnitType.Port) {
+      tiles = Array.from(this.player.borderTiles()).filter((t) =>
+        this.mg.isOceanShore(t),
+      );
+    } else {
+      tiles = Array.from(this.player.tiles());
+    }
+
+    if (tiles.length === 0) {
+      return null;
+    }
+
     return this.random.randElement(tiles);
   }
 
@@ -696,10 +777,13 @@ export class FakeHumanExecution implements Execution {
 
     const ports = this.player.units(UnitType.Port);
     const ships = this.player.units(UnitType.Warship);
+    const cost = this.cost(UnitType.Warship);
+    const goldReserve = this.calculateGoldReserve();
+
     if (
       ports.length > 0 &&
       ships.length === 0 &&
-      this.player.gold() > this.cost(UnitType.Warship)
+      this.player.gold() - cost >= goldReserve
     ) {
       // Only use randomness when we can actually build
       if (!this.random.chance(50)) {
@@ -768,6 +852,43 @@ export class FakeHumanExecution implements Execution {
   private cost(type: UnitType): Gold {
     if (this.player === null) throw new Error("not initialized");
     return this.mg.unitInfo(type).cost(this.player);
+  }
+
+  private calculateGoldReserve(): Gold {
+    if (this.player === null) throw new Error("not initialized");
+
+    // Dynamic gold reserve based on buildings owned
+    // Formula: 1M gold reserve per 5 buildings owned
+    const buildings = this.player.units(
+      UnitType.City,
+      UnitType.Port,
+      UnitType.Factory,
+      UnitType.MissileSilo,
+      UnitType.SAMLauncher,
+      UnitType.DefensePost,
+    );
+
+    // Each building level counts as one towards the reserve calculation
+    const buildingCount = buildings.reduce(
+      (sum, unit) => sum + unit.level(),
+      0,
+    );
+
+    // Calculate reserve: (buildings / 5) * 1M
+    const reserveMultiplier = BigInt(Math.floor(buildingCount / 5));
+    let dynamicReserve = reserveMultiplier * 1_000_000n; // 1M per 5 buildings
+
+    // Ensure the bot always keeps a sensible minimum reserve.
+    const minReserve = 0n; // 0 baseline
+    if (dynamicReserve < minReserve) {
+      dynamicReserve = minReserve;
+    }
+
+    // Cap the reserve to prevent excessive hoarding.
+    const maxReserve = 50_000_000n; // 50M
+    if (dynamicReserve > maxReserve) return maxReserve;
+
+    return dynamicReserve;
   }
 
   sendBoatRandomly() {
@@ -875,5 +996,37 @@ export class FakeHumanExecution implements Execution {
 
   activeDuringSpawnPhase(): boolean {
     return true;
+  }
+
+  // Consider an enemy "active attacker" if they currently have an attack or nuke inbound
+  private isActiveAttacker(enemy: Player): boolean {
+    if (this.player === null) throw new Error("not initialized");
+
+    // Ongoing troop attacks
+    const incomingAttacks = this.player
+      .incomingAttacks()
+      .filter((a) => a.attacker() === enemy && a.isActive());
+    if (incomingAttacks.length > 0) return true;
+
+    // Incoming nukes – check for any active NukeExecution targeting us
+    const mgExecs: Execution[] =
+      (
+        this.mg as unknown as { executions?: () => Execution[] }
+      ).executions?.() ?? [];
+    const incomingNukes = mgExecs.filter(
+      (e): e is NukeExecution => e instanceof NukeExecution,
+    );
+    for (const ne of incomingNukes) {
+      // Skip nukes that haven't been initialized yet (mg undefined)
+      try {
+        const targetOwner = ne.target();
+        if (targetOwner.isPlayer() && targetOwner === this.player) return true;
+      } catch {
+        // ignore uninitialized execution
+        continue;
+      }
+    }
+
+    return false;
   }
 }

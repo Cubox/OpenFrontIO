@@ -102,17 +102,6 @@ export class GameRunner {
       this.game.addExecution(...this.execManager.fakeHumanExecutions());
     }
 
-    // Initialize delegation management for human players
-    this.execManager.initDelegation();
-
-    // Update delegation settings from localStorage for all human players
-    this.game
-      .players()
-      .filter((p) => p.type() === PlayerType.Human)
-      .forEach((p) => {
-        this.execManager.updateDelegationFromUserSettings(p.id());
-      });
-
     this.game.addExecution(new WinCheckExecution());
   }
 
@@ -263,13 +252,5 @@ export class GameRunner {
       throw new Error(`player with id ${playerID} not found`);
     }
     return player.bestTransportShipSpawn(targetTile);
-  }
-
-  public updateDelegationSettings(enabled: boolean, goldReserve: number): void {
-    // Update delegation settings for all human players at once
-    this.execManager.updateAllDelegationsFromDirectSettings(
-      enabled,
-      goldReserve,
-    );
   }
 }

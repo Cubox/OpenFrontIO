@@ -162,23 +162,6 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
         console.error("Failed to spawn transport ship:", error);
       }
       break;
-    case "delegation_settings":
-      if (!gameRunner) {
-        console.warn(
-          "Game runner not initialized, cannot update delegation settings",
-        );
-        break;
-      }
-
-      try {
-        (await gameRunner).updateDelegationSettings(
-          message.enabled,
-          message.goldReserve,
-        );
-      } catch (error) {
-        console.error("Failed to update delegation settings:", error);
-      }
-      break;
     default:
       console.warn("Unknown message :", message);
   }

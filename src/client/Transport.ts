@@ -26,7 +26,6 @@ import {
   Winner,
 } from "../core/Schemas";
 import { replacer } from "../core/Util";
-import { WorkerClient } from "../core/worker/WorkerClient";
 import { LobbyConfig } from "./ClientGameRunner";
 import { LocalServer } from "./LocalServer";
 
@@ -186,7 +185,6 @@ export class Transport {
 
   private pingInterval: number | null = null;
   public readonly isLocal: boolean;
-  private workerClient: WorkerClient | null = null;
   constructor(
     private lobbyConfig: LobbyConfig,
     private eventBus: EventBus,
@@ -373,10 +371,6 @@ export class Transport {
     }
   }
 
-  public setWorkerClient(workerClient: WorkerClient): void {
-    this.workerClient = workerClient;
-  }
-
   joinGame(numTurns: number) {
     this.sendMsg({
       type: "join",
@@ -551,7 +545,7 @@ export class Transport {
   }
 
   private onSendBuildingDelegationEvent(event: SendBuildingDelegationEvent) {
-    // Handle building delegation locally - store in localStorage
+    // Store delegation settings in localStorage for persistence
     localStorage.setItem(
       "settings.buildingDelegation",
       event.enabled.toString(),
@@ -560,14 +554,6 @@ export class Transport {
       "settings.buildingDelegationReserve",
       event.goldReserve.toString(),
     );
-
-    // Send settings to worker (Web Workers can't access localStorage)
-    if (this.workerClient) {
-      this.workerClient.sendDelegationSettings(
-        event.enabled,
-        event.goldReserve,
-      );
-    }
   }
 
   private onBuildUnitIntent(event: BuildUnitIntentEvent) {

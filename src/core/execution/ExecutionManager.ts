@@ -9,7 +9,6 @@ import { AttackExecution } from "./AttackExecution";
 import { BoatRetreatExecution } from "./BoatRetreatExecution";
 import { BotSpawner } from "./BotSpawner";
 import { ConstructionExecution } from "./ConstructionExecution";
-import { DelegationManager } from "./DelegationManager";
 import { DonateGoldExecution } from "./DonateGoldExecution";
 import { DonateTroopsExecution } from "./DonateTroopExecution";
 import { EmbargoExecution } from "./EmbargoExecution";
@@ -30,7 +29,6 @@ import { UpgradeStructureExecution } from "./UpgradeStructureExecution";
 export class Executor {
   // private random = new PseudoRandom(999)
   private random: PseudoRandom;
-  private delegationManager: DelegationManager | null = null;
 
   constructor(
     private mg: Game,
@@ -39,38 +37,6 @@ export class Executor {
   ) {
     // Add one to avoid id collisions with bots.
     this.random = new PseudoRandom(simpleHash(gameID) + 1);
-  }
-
-  initDelegation() {
-    this.delegationManager = new DelegationManager(this.mg, this.gameID);
-    this.delegationManager.init();
-  }
-
-  updatePlayerDelegation(
-    playerId: string,
-    goldReserve: number,
-    enabled: boolean,
-  ) {
-    this.delegationManager?.updatePlayerDelegation(
-      playerId,
-      goldReserve,
-      enabled,
-    );
-  }
-
-  updateDelegationFromUserSettings(playerId: string) {
-    this.delegationManager?.updateFromUserSettings(playerId);
-  }
-
-  updateAllDelegationsFromUserSettings() {
-    this.delegationManager?.updateAllFromUserSettings();
-  }
-
-  updateAllDelegationsFromDirectSettings(
-    enabled: boolean,
-    goldReserve: number,
-  ) {
-    this.delegationManager?.updateAllFromDirectSettings(enabled, goldReserve);
   }
 
   createExec(intent: Intent): Execution {
